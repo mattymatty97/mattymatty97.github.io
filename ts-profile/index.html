@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thunderstore Profile Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="script.js"></script>
+</head>
+<body>
+<div class="container">
+    <h1>Thunderstore Profile Visualizer</h1>
+    <form id="profileForm">
+        <input type="text" id="uuidInput" placeholder="Enter UUID">
+        <button class="fetch-btn" type="submit">Fetch Profile</button>
+    </form>
+    <div id="status-message"class="status-message"></div>
+    <div id="parsed-data"></div>
+</div>
+</body>
+</html>

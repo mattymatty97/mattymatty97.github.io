@@ -1,0 +1,136 @@
+/* Basic Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #121212; /* Dark background */
+    color: #ffffff; /* Light text for readability */
+}
+
+.status-message {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.error-message {
+    color: red;
+}
+
+.success-message {
+    color: green;
+}
+
+.container {
+    width: 80%;
+    max-width: 860px;
+    padding: 20px;
+    background-color: #1c1c1e; /* Darker background for the container */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Dark shadow */
+    overflow-y: auto;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #ffffff; /* Ensure headings are readable in dark mode */
+}
+
+form {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    max-width: 850px;
+}
+
+input[type="text"] {
+    max-width: 600px;
+    width: calc(75% - 10px);
+    padding: 10px;
+    border: 1px solid #444; /* Darker border */
+    border-radius: 4px;
+    background-color: #1c1c1e; /* Match the container background */
+    color: #ffffff; /* Ensure text is readable in dark mode */
+}
+
+.fetch-btn {
+    width: calc(23% - 10px);
+    padding: 10px;
+    background-color: #007bff; /* Keep this blue for contrast */
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.parsed-data {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 15px;
+    border: 1px solid #333; /* Darker border */
+    border-radius: 5px;
+    background-color: #1c1c1e; /* Match the container background */
+    overflow-y: auto;
+}
+
+.profile-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.profile-content {
+    display: flex;
+    flex-direction: column;
+    padding-right: 8px;
+}
+
+.download-btn {
+    width: calc(23% - 10px);
+    align-self: center;
+    padding: 10px;
+    background-color: #00438e; /* Keep this blue for contrast */
+    color: #949494;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.mod-container {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    border: 1px solid #333; /* Darker border */
+    border-radius: 4px;
+    background-color: #1c1c1e; /* Match the container background */
+}
+
+.mod-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.mod-header {
+    display: flex;
+    flex-direction: column;
+    padding-left: 8px;
+}
+
+.warning-icon {
+    margin-left: 4px; /* Adjust as needed */
+}
