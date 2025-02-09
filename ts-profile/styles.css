@@ -11,8 +11,50 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #121212; /* Dark background */
-    color: #ffffff; /* Light text for readability */
+    background-color: #121212;
+    color: #ffffff;
+    padding: 10px;
+}
+
+.container {
+    width: 100%;
+    max-width: 860px;
+    padding: 15px;
+    background-color: #1c1c1e;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #ffffff;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    form {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background-color: #1c1c1e;
+    color: #ffffff;
 }
 
 .status-message {
@@ -28,69 +70,44 @@ body {
     color: green;
 }
 
-.container {
-    width: 80%;
-    max-width: 860px;
-    padding: 20px;
-    background-color: #1c1c1e; /* Darker background for the container */
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Dark shadow */
-    overflow-y: auto;
-}
-
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #ffffff; /* Ensure headings are readable in dark mode */
-}
-
-form {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    max-width: 850px;
-}
-
-input[type="text"] {
-    max-width: 600px;
-    width: calc(75% - 10px);
-    padding: 10px;
-    border: 1px solid #444; /* Darker border */
-    border-radius: 4px;
-    background-color: #1c1c1e; /* Match the container background */
-    color: #ffffff; /* Ensure text is readable in dark mode */
-}
-
-.fetch-btn {
-    width: calc(23% - 10px);
-    padding: 10px;
-    background-color: #007bff; /* Keep this blue for contrast */
+.fetch-btn, .download-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
     color: #fff;
     border: none;
     border-radius: 4px;
     cursor: pointer;
 }
 
-button:hover {
-    background-color: #0056b3;
+@media (min-width: 768px) {
+    input[type="text"] {
+        width: 75%;
+    }
+    
+    .fetch-btn, .download-btn {
+        width: 23%;
+    }
 }
 
 .parsed-data {
-    max-width: 800px;
     margin: 20px auto;
     padding: 15px;
-    border: 1px solid #333; /* Darker border */
-    border-radius: 5px;
-    background-color: #1c1c1e; /* Match the container background */
-    overflow-y: auto;
 }
 
 .profile-container {
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 15px;
     margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+    .profile-container {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
 }
 
 .profile-content {
@@ -99,38 +116,47 @@ button:hover {
     padding-right: 8px;
 }
 
-.download-btn {
-    width: calc(23% - 10px);
-    align-self: center;
-    padding: 10px;
-    background-color: #00438e; /* Keep this blue for contrast */
-    color: #949494;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
 .mod-container {
     display: flex;
     align-items: flex-start;
+    padding: 10px;
     margin-bottom: 16px;
-    border: 1px solid #333; /* Darker border */
+    border: 1px solid #333;
     border-radius: 4px;
-    background-color: #1c1c1e; /* Match the container background */
 }
 
 .mod-content {
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+}
+
+@media (min-width: 768px) {
+    .mod-content {
+        flex-direction: row;
+        align-items: flex-start;
+    }
 }
 
 .mod-header {
     display: flex;
     flex-direction: column;
-    padding-left: 8px;
+    padding: 8px;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
 }
 
 .warning-icon {
-    margin-left: 4px; /* Adjust as needed */
+    width: 30px;
+    height: 30px;
+    margin: 8px 0;
+}
+
+@media (min-width: 768px) {
+    .warning-icon {
+        margin: 0 8px;
+    }
 }

@@ -5,16 +5,37 @@ document.addEventListener('DOMContentLoaded', function () {
     const parsedDataContainer = document.getElementById('parsed-data');
     const proxyUrl = "https://corsproxy.io/?url=";
 
+    // Add viewport meta for proper mobile scaling
+    if (!document.querySelector('meta[name="viewport"]')) {
+        const meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        document.head.appendChild(meta);
+    }
+
+    // Handle mobile keyboard appearing/disappearing
+    window.addEventListener('resize', () => {
+        // Wait for keyboard animation
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+        }, 100);
+    });
+
     form.addEventListener('submit', async function (event) {
         event.preventDefault();
-        statusMessage.classList.remove("error-message");
-        statusMessage.classList.remove("success-message");
+
+        // Blur input to hide mobile keyboard
+        uuidInput.blur();
+
+        statusMessage.classList.remove("error-message", "success-message");
         statusMessage.textContent = 'Fetching profile...';
         parsedDataContainer.innerHTML = '';
         parsedDataContainer.classList.remove("parsed-data");
 
-        const uuid = uuidInput.value;
+        const uuid = uuidInput.value.trim();
         if (!uuid) {
+            statusMessage.classList.add("error-message");
             statusMessage.textContent = 'Please enter a UUID.';
             return;
         }
@@ -25,132 +46,149 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error('Failed to fetch profile.');
             }
 
-            var yamlData = response.json()
-
+            const yamlData = response.json();
             parsedDataContainer.classList.add("parsed-data");
 
-            const profileContainer = document.createElement('div');
-            profileContainer.className = 'profile-container';
-
-            const profileContent = document.createElement('div');
-            profileContent.className = 'profile-content';
-
-            const uuidParagraph = document.createElement('p');
-            uuidParagraph.innerHTML = `<strong>Uuid:</strong> ${uuid}`
-            const sourceParagraph = document.createElement('p');
-            sourceParagraph.innerHTML = `<strong>From:</strong> ${yamlData.source}`
-            const titleParagraph = document.createElement('h2');
-            titleParagraph.innerHTML = yamlData.profileName
-
-            const btnElement = document.createElement('button');
-            btnElement.id = 'download-btn';
-            btnElement.className = "download-btn";
-            btnElement.type = 'submit';
-            btnElement.innerText = 'Download As Archive';
-
-            profileContent.appendChild(uuidParagraph);
-            profileContent.appendChild(sourceParagraph);
-            profileContent.appendChild(titleParagraph);
-            profileContainer.appendChild(profileContent);
-            profileContainer.appendChild(btnElement);
-
+            // Create mobile-friendly profile container
+            const profileContainer = createProfileContainer(uuid, yamlData);
             parsedDataContainer.appendChild(profileContainer);
 
-            // Display mods
-            if (yamlData.mods && yamlData.mods.length > 0) {
-                const modsParagraph = document.createElement('h3');
-                modsParagraph.innerHTML = `Mods (${yamlData.mods.length}):`;
-
-                parsedDataContainer.appendChild(modsParagraph);
-                parsedDataContainer.appendChild(document.createElement('br'));
-
-                yamlData.mods.forEach(mod => {
-                    const [namespace, name] = mod.name.split('-');
-                    const endpoint = `https://thunderstore.io/api/experimental/package/${namespace}/${name}/`;
-                    const fullUrl = `${proxyUrl}${encodeURIComponent(endpoint)}`;
-
-                    // Fetch data from Thunderstore
-                    fetch(fullUrl)
-                        .then(response => response.json())
-                        .then(data => {
-                            const isDisabled = !mod.enabled;
-                            const isDeprecated = data.is_deprecated;
-                            const iconUrl = data.latest.icon;
-
-                            // Update the HTML with new information
-                            const modContainer = document.createElement('div');
-                            modContainer.className = 'mod-container';
-
-                            const modContent = document.createElement('div');
-                            modContent.className = 'mod-content';
-
-                            const iconImg = document.createElement('img');
-                            iconImg.src = iconUrl;
-                            iconImg.alt = `${mod.name} Icon`;
-                            iconImg.style.maxWidth = '100px';
-                            iconImg.style.marginRight = '8px'; // Add some margin to separate the icon from text
-
-                            const modHeader = document.createElement('div');
-                            modHeader.className = 'mod-header';
-                            if (isDisabled)
-                                modHeader.innerHTML = `<span style="text-decoration: line-through;">${mod.name}</span>`;
-                            else
-                                modHeader.textContent = mod.name;
-
-                            const enabledParagraph = document.createElement('p');
-                            enabledParagraph.innerHTML = `<br><strong>Enabled:</strong> ${mod.enabled ? 'Yes' : 'No'}`;
-
-                            const versionParagraph = document.createElement('p');
-                            versionParagraph.innerHTML = `<strong>Version:</strong> ${mod.version.major}.${mod.version.minor}.${mod.version.patch}`;
-
-
-                            modContent.appendChild(iconImg);
-                            modHeader.appendChild(document.createElement('div'));
-                            modHeader.appendChild(enabledParagraph);
-                            modHeader.appendChild(versionParagraph);
-
-                            if (isDeprecated) {
-                                const deprecatedParagraph = document.createElement('p');
-                                deprecatedParagraph.innerHTML = `<strong>Deprecated:</strong>  Yes`;
-                                modHeader.appendChild(deprecatedParagraph);
-                            }
-
-                            modContent.appendChild(modHeader);
-
-                            // Conditionally add the deprecated paragraph
-                            if (isDeprecated) {
-                                const warningIcon = document.createElement('img');
-                                warningIcon.src = 'warning.png'; // Update with your actual path
-                                warningIcon.alt = 'Caution Icon';
-                                warningIcon.style.maxWidth = '50px';
-                                warningIcon.style.marginRight = '4px';
-                                warningIcon.className = 'warning-icon';
-                                modContent.appendChild(warningIcon);
-                            }
-
-                            modContainer.appendChild(modContent);
-
-                            parsedDataContainer.appendChild(modContainer);
-                        })
-                        .catch(error => {
-                            console.error(`Error fetching data for ${mod.name}:`, error);
-                        });
-                });
+            // Handle mods display
+            if (yamlData.mods?.length > 0) {
+                await displayMods(yamlData.mods, parsedDataContainer);
             } else {
-                parsedDataContainer.innerHTML += '<p>No mods found.</p>';
+                const noMods = document.createElement('p');
+                noMods.textContent = 'No mods found.';
+                parsedDataContainer.appendChild(noMods);
             }
 
+            // Add download handler
             document.getElementById('download-btn').addEventListener('click', function() {
                 saveAs(response.blob(), `${yamlData.profileName}.zip`);
             });
 
             statusMessage.classList.add("success-message");
             statusMessage.textContent = 'Profile fetched successfully.';
+
+            // Smooth scroll to results on mobile
+            if (window.innerWidth <= 768) {
+                parsedDataContainer.scrollIntoView({ behavior: 'smooth' });
+            }
         } catch (error) {
             statusMessage.classList.add("error-message");
             statusMessage.textContent = error.message;
         }
     });
+
+    async function displayMods(mods, container) {
+        const modsParagraph = document.createElement('h3');
+        modsParagraph.innerHTML = `Mods (${mods.length}):`;
+        container.appendChild(modsParagraph);
+        container.appendChild(document.createElement('br'));
+
+        // Use Promise.all for parallel mod fetching
+        const modPromises = mods.map(mod => createModElement(mod));
+        const modElements = await Promise.all(modPromises);
+        modElements.forEach(element => container.appendChild(element));
+    }
+
+    async function createModElement(mod) {
+        const modContainer = document.createElement('div');
+        modContainer.className = 'mod-container';
+
+        const modContent = document.createElement('div');
+        modContent.className = 'mod-content';
+
+        const modHeader = createModHeader(mod);
+        modContent.appendChild(modHeader);
+        modContainer.appendChild(modContent);
+
+        try {
+            const [namespace, name] = mod.name.split('-');
+            const endpoint = `https://thunderstore.io/api/experimental/package/${namespace}/${name}/`;
+            const fullUrl = `${proxyUrl}${encodeURIComponent(endpoint)}`;
+
+            const response = await fetch(fullUrl);
+            if (!response.ok) throw new Error('Failed to fetch mod data');
+
+            const data = await response.json();
+            await enhanceModElement(modContent, modHeader, data);
+        } catch (error) {
+            console.error(`Error fetching data for ${mod.name}:`, error);
+        }
+
+        return modContainer;
+    }
+
+    function createProfileContainer(uuid, yamlData) {
+        const container = document.createElement('div');
+        container.className = 'profile-container';
+
+        const content = document.createElement('div');
+        content.className = 'profile-content';
+
+        content.innerHTML = `
+            <p><strong>Uuid:</strong> ${uuid}</p>
+            <p><strong>From:</strong> ${yamlData.source}</p>
+            <h2>${yamlData.profileName}</h2>
+        `;
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.id = 'download-btn';
+        downloadBtn.className = 'download-btn';
+        downloadBtn.textContent = 'Download As Archive';
+
+        container.appendChild(content);
+        container.appendChild(downloadBtn);
+
+        return container;
+    }
+
+    function createModHeader(mod) {
+        const header = document.createElement('div');
+        header.className = 'mod-header';
+
+        const nameElement = document.createElement('div');
+        nameElement.innerHTML = mod.enabled ?
+            mod.name :
+            `<span style="text-decoration: line-through;">${mod.name}</span>`;
+
+        const enabledParagraph = document.createElement('p');
+        enabledParagraph.innerHTML = `<br><strong>Enabled:</strong> ${mod.enabled ? 'Yes' : 'No'}`;
+
+        const versionParagraph = document.createElement('p');
+        versionParagraph.innerHTML = `<strong>Version:</strong> ${mod.version.major}.${mod.version.minor}.${mod.version.patch}`;
+
+        header.appendChild(nameElement);
+        header.appendChild(enabledParagraph);
+        header.appendChild(versionParagraph);
+
+        return header;
+    }
+
+    async function enhanceModElement(modContent, modHeader, data) {
+        if (data.latest?.icon) {
+            const iconImg = document.createElement('img');
+            iconImg.src = data.latest.icon;
+            iconImg.alt = 'Mod Icon';
+            iconImg.style.maxWidth = '100px';
+            iconImg.loading = 'lazy';
+            modContent.prepend(iconImg);
+        }
+
+        if (data.is_deprecated) {
+            const deprecatedParagraph = document.createElement('p');
+            deprecatedParagraph.innerHTML = '<strong>Deprecated:</strong> Yes';
+            modHeader.appendChild(deprecatedParagraph);
+
+            const warningIcon = document.createElement('img');
+            warningIcon.src = 'warning.png';
+            warningIcon.alt = 'Warning';
+            warningIcon.className = 'warning-icon';
+            warningIcon.loading = 'lazy';
+            modContent.appendChild(warningIcon);
+        }
+    }
 
     function fetchProfileData(uuid) {
         const endpoint = `https://thunderstore.io/api/experimental/legacyprofile/get/${uuid}/`;
@@ -230,5 +268,4 @@ document.addEventListener('DOMContentLoaded', function () {
             reader.readAsText(blob);
         });
     }
-})
-;
+});
