@@ -96,12 +96,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const modContainer = document.createElement('div');
         modContainer.className = 'mod-container';
 
-        const modContent = document.createElement('div');
-        modContent.className = 'mod-content';
+        const modContent1 = document.createElement('div');
+        modContent1.className = 'mod-content1';
 
-        const modHeader = createModHeader(mod);
-        modContent.appendChild(modHeader);
-        modContainer.appendChild(modContent);
+        const modContent2 = document.createElement('div');
+        modContent2.className = 'mod-content2';
+
+        const modHeader= createModHeader(mod);
+        modContent2.appendChild(modHeader);
+        modContent1.appendChild(modContent2);
+        modContainer.appendChild(modContent1);
 
         try {
             const [namespace, name] = mod.name.split('-');
@@ -112,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) throw new Error('Failed to fetch mod data');
 
             const data = await response.json();
-            await enhanceModElement(modContent, modHeader, data);
+            await enhanceModElement(modContent1, modContent2, modHeader, data);
         } catch (error) {
             console.error(`Error fetching data for ${mod.name}:`, error);
         }
@@ -149,9 +153,10 @@ document.addEventListener('DOMContentLoaded', function () {
         header.className = 'mod-header';
 
         const nameElement = document.createElement('div');
-        nameElement.innerHTML = mod.enabled ?
-            mod.name :
-            `<span style="text-decoration: line-through;">${mod.name}</span>`;
+        nameElement.innerText = mod.name;
+        if (!mod.enabled){
+            nameElement.className = 'disabled-mod';
+        }
 
         const enabledParagraph = document.createElement('p');
         enabledParagraph.innerHTML = `<br><strong>Enabled:</strong> ${mod.enabled ? 'Yes' : 'No'}`;
@@ -166,14 +171,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return header;
     }
 
-    async function enhanceModElement(modContent, modHeader, data) {
+    async function enhanceModElement(modContent1, modContent2, modHeader, data) {
         if (data.latest?.icon) {
             const iconImg = document.createElement('img');
+            iconImg.className = 'mod-icon';
             iconImg.src = data.latest.icon;
             iconImg.alt = 'Mod Icon';
-            iconImg.style.maxWidth = '100px';
             iconImg.loading = 'lazy';
-            modContent.prepend(iconImg);
+            modContent1.prepend(iconImg);
         }
 
         if (data.is_deprecated) {
@@ -186,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
             warningIcon.alt = 'Warning';
             warningIcon.className = 'warning-icon';
             warningIcon.loading = 'lazy';
-            modContent.appendChild(warningIcon);
+            modContent2.appendChild(warningIcon);
         }
     }
 
