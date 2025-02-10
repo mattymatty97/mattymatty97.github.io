@@ -1,9 +1,14 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
+    const proxyUrl = "https://corsproxy.io/?url=";
+
     const form = document.getElementById('profileForm');
     const uuidInput = document.getElementById('uuidInput');
     const statusMessage = document.getElementById('status-message');
     const parsedDataContainer = document.getElementById('parsed-data');
-    const proxyUrl = "https://corsproxy.io/?url=";
+
+    const queryParams = new Proxy(new URLSearchParams(window.location.search), {
+        get: (searchParams, prop) => searchParams.get(prop),
+    });
 
     // Add viewport meta for proper mobile scaling
     if (!document.querySelector('meta[name="viewport"]')) {
@@ -28,12 +33,23 @@ document.addEventListener('DOMContentLoaded', function () {
         // Blur input to hide mobile keyboard
         uuidInput.blur();
 
+        const uuid = uuidInput.value.trim();
+
+        await getProfile(uuid);
+    });
+
+    if (queryParams.profile) {
+        uuidInput.value = queryParams.profile;
+        uuidInput.blur();
+        await getProfile(queryParams.profile);
+    }
+
+    async function getProfile(uuid) {
         statusMessage.classList.remove("error-message", "success-message");
         statusMessage.textContent = 'Fetching profile...';
         parsedDataContainer.innerHTML = '';
         parsedDataContainer.classList.remove("parsed-data");
 
-        const uuid = uuidInput.value.trim();
         if (!uuid) {
             statusMessage.classList.add("error-message");
             statusMessage.textContent = 'Please enter a UUID.';
@@ -63,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Add download handler
-            document.getElementById('download-btn').addEventListener('click', function() {
+            document.getElementById('download-btn').addEventListener('click', function () {
                 saveAs(response.blob(), `${yamlData.profileName}.zip`);
             });
 
@@ -72,13 +88,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Smooth scroll to results on mobile
             if (window.innerWidth <= 768) {
-                parsedDataContainer.scrollIntoView({ behavior: 'smooth' });
+                parsedDataContainer.scrollIntoView({behavior: 'smooth'});
             }
         } catch (error) {
             statusMessage.classList.add("error-message");
             statusMessage.textContent = error.message;
         }
-    });
+    }
 
     async function displayMods(mods, container) {
         const modsParagraph = document.createElement('h3');
@@ -102,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const modContent2 = document.createElement('div');
         modContent2.className = 'mod-content2';
 
-        const modHeader= createModHeader(mod);
+        const modHeader = createModHeader(mod);
         modContent2.appendChild(modHeader);
         modContent1.appendChild(modContent2);
         modContainer.appendChild(modContent1);
@@ -154,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const nameElement = document.createElement('div');
         nameElement.innerText = mod.name;
-        if (!mod.enabled){
+        if (!mod.enabled) {
             nameElement.className = 'disabled-mod';
         }
 
