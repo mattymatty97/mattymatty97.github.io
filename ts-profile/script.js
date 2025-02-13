@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', async function () {
     const proxyUrl = "https://corsproxy.io/?url=";
+    const thunderstoreUrl = "https://thunderstore.io/";
+    const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
+    const getPackageUrl = (namespace, name) => `${thunderstoreUrl}api/experimental/package/${namespace}/${name}/`;
 
     const form = document.getElementById('profileForm');
     const uuidInput = document.getElementById('uuidInput');
@@ -125,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         try {
             const [namespace, name] = mod.name.split('-');
-            const endpoint = `https://thunderstore.io/api/experimental/package/${namespace}/${name}/`;
+            const endpoint = getPackageUrl(namespace, name);
             const fullUrl = `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
             const response = await fetch(fullUrl);
@@ -212,7 +215,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     function fetchProfileData(uuid) {
-        const endpoint = `https://thunderstore.io/api/experimental/legacyprofile/get/${uuid}/`;
+        const endpoint = getProfileUrl(uuid);
         const fullUrl = `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
         return new Promise((resolve, reject) => {
