@@ -122,8 +122,18 @@ document.addEventListener('DOMContentLoaded', async function () {
         modContent2.className = 'mod-content2';
 
         const modHeader = createModHeader(mod);
+
         modContent2.appendChild(modHeader);
+
+        const modIcon = document.createElement('img');
+        modIcon.classList.add('mod-icon', 'missing-icon');
+        modIcon.src = 'image.svg';
+        modIcon.alt = 'Mod Icon';
+        modIcon.loading = 'lazy';
+
+        modContent1.appendChild(modIcon);
         modContent1.appendChild(modContent2);
+
         modContainer.appendChild(modContent1);
 
         try {
@@ -136,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             const data = await response.json();
             await enhanceModElement(modContent1, modContent2, modHeader, data);
+                    await enhanceModElement(modContent2, modIcon, modHeader, data);
         } catch (error) {
             console.error(`Error fetching data for ${mod.name}:`, error);
         }
@@ -190,14 +201,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         return header;
     }
 
-    async function enhanceModElement(modContent1, modContent2, modHeader, data) {
+    async function enhanceModElement(modContent, modIcon, modHeader, data) {
         if (data.latest?.icon) {
-            const iconImg = document.createElement('img');
-            iconImg.className = 'mod-icon';
-            iconImg.src = data.latest.icon;
-            iconImg.alt = 'Mod Icon';
-            iconImg.loading = 'lazy';
-            modContent1.prepend(iconImg);
+            modIcon.src = data.latest.icon;
+            modIcon.classList.remove('missing-icon');
         }
 
         if (data.is_deprecated) {
@@ -210,7 +217,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             warningIcon.alt = 'Warning';
             warningIcon.className = 'warning-icon';
             warningIcon.loading = 'lazy';
-            modContent2.appendChild(warningIcon);
+            modContent.appendChild(warningIcon);
         }
     }
 
