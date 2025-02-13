@@ -141,12 +141,16 @@ document.addEventListener('DOMContentLoaded', async function () {
             const endpoint = getPackageUrl(namespace, name);
             const fullUrl = `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
-            const response = await fetch(fullUrl);
-            if (!response.ok) throw new Error('Failed to fetch mod data');
-
-            const data = await response.json();
-            await enhanceModElement(modContent1, modContent2, modHeader, data);
+            fetch(fullUrl)
+                .then(async (res) => {
+                    if (res.ok)
+                        return await res.json()
+                    throw new Error(`Failed to fetch mod data: ${res.statusText}`);
+                })
+                .then(async (data) => {
                     await enhanceModElement(modContent2, modIcon, modHeader, data);
+                })
+                .catch(console.error);
         } catch (error) {
             console.error(`Error fetching data for ${mod.name}:`, error);
         }
