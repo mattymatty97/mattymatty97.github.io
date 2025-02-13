@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const thunderstoreUrl = "https://thunderstore.io/";
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
     const getPackageUrl = (namespace, name) => `${thunderstoreUrl}api/experimental/package/${namespace}/${name}/`;
+    const getRequestUrl = (endpoint) =>  `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
     const form = document.getElementById('profileForm');
     const uuidInput = document.getElementById('uuidInput');
@@ -139,9 +140,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         try {
             const [namespace, name] = mod.name.split('-');
             const endpoint = getPackageUrl(namespace, name);
-            const fullUrl = `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
-            fetch(fullUrl)
+            fetch(getRequestUrl(endpoint))
                 .then(async (res) => {
                     if (res.ok)
                         return await res.json()
@@ -227,10 +227,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function fetchProfileData(uuid) {
         const endpoint = getProfileUrl(uuid);
-        const fullUrl = `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
         return new Promise((resolve, reject) => {
-            fetch(fullUrl)
+            fetch(getRequestUrl(endpoint))
                 .then(response => {
                     if (response.ok) {
                         return response.blob();
