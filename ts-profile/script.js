@@ -1,14 +1,8 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    const cacheVersion = 1;
-    await deleteOldCaches();
-
-    const fetchInterval = 100;
-    const fetchIntervalLong = 60 * 1000;
-
     const proxyUrl = "https://corsproxy.io/?url=";
     const thunderstoreUrl = "https://thunderstore.io/";
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
-    const getPackageUrl = (namespace, name) => `${thunderstoreUrl}api/experimental/package/${namespace}/${name}/`;
+    const getIconUrl = (namespace, name, version) => `https://gcdn.thunderstore.io/live/repository/icons/${namespace}-${name}-${version}.png`;
     const getRequestUrl = (endpoint) =>  `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
     const form = document.getElementById('profileForm');
@@ -115,101 +109,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Use Promise.all for parallel mod fetching
         const modPromises = mods.map(mod => createModElement(mod));
         const modElements = await Promise.all(modPromises);
-        modElements.forEach(element => container.appendChild(element[0]));
-        for (const element of modElements) {
-            const mod = element[1];
-            const callback = element[2];
-            try {
-                const [namespace, name] = mod.name.split('-');
-                const endpoint = getPackageUrl(namespace, name);
-
-                const cachedData = await fetchCachedData(endpoint);
-
-                if (cachedData){
-                    callback(cachedData);
-                    continue;
-                }
-
-                await sleep(fetchInterval);
-
-                let [valid, response] = await fetchLiveData(endpoint);
-
-                if (!valid && response != null && response.status === 403) {
-
-                    const header = response.headers.get('retry-after');
-                    let delay = fetchIntervalLong;
-                    if (header) {
-                        delay = header * 1000;
-                    }
-
-                    console.warn(`Rate-limit hit, throttling for: ${delay}ms!`)
-
-                    await sleep(delay);
-
-                    [valid, response] = await fetchLiveData(endpoint);
-                }
-
-                if (valid && response != null) {
-                    const data = await response.json();
-                    updateCachedData(endpoint, Date.now(), data);
-                    callback(data);
-                }else{
-                    console.error(`Failed to fetch mod: ${mod.name}`);
-                }
-
-            } catch (error) {
-                console.error(`Error fetching data for ${mod.name}:`, error);
-            }
-        }
-    }
-
-    async function fetchCachedData(endpoint) {
-        const storage = window.localStorage;
-        const cachedResponse = storage.getItem(endpoint);
-
-        if (cachedResponse == null) {
-            return false;
-        }
-
-        const cachedJson = JSON.parse(cachedResponse);
-
-        const date = new Date(cachedJson.timestamp)
-        // if cached file is older than 1 hour
-        if(Date.now() > date.getTime() + 1000 * 60 * 60){
-            return false;
-        }
-
-        console.log(`Cache hit for: ${endpoint}`)
-
-        return cachedJson.data;
-    }
-
-    function updateCachedData(endpoint, timestamp, data) {
-        const storage = window.localStorage;
-        storage[endpoint] = JSON.stringify({ timestamp: timestamp, data: data });
-    }
-
-    async function deleteOldCaches() {
-        const storage = window.localStorage;
-        const storageVersion = storage.version;
-        if (storageVersion < cacheVersion) {
-            storage.clear();
-        }else{
-            const keys = Object.keys(storage);
-            for (const key of keys) {
-                if (key === 'version')
-                    continue;
-
-                const cachedResponse = JSON.parse(storage.getItem(key));
-
-                const date = new Date(cachedResponse.timestamp)
-                // if cached file is older than 1 hour
-                if(Date.now() > date.getTime() + 1000 * 60 * 60){
-                    storage.removeItem(key);
-                }
-            }
-        }
-        storage.version = cacheVersion;
+        modElements.forEach(element => container.appendChild(element));
     }
 
     async function fetchLiveData(endpoint) {
@@ -250,6 +150,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     async function createModElement(mod) {
+        const [namespace, name] = mod.name.split('-');
+        const version = `${mod.version.major}.${mod.version.minor}.${mod.version.patch}`;
+
         const modContainer = document.createElement('div');
         modContainer.className = 'mod-container';
 
@@ -264,8 +167,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         modContent2.appendChild(modHeader);
 
         const modIcon = document.createElement('img');
-        modIcon.classList.add('mod-icon', 'missing-icon');
-        modIcon.src = 'image.svg';
+        modIcon.classList.add('mod-icon');
+        modIcon.src = getIconUrl(namespace, name, version);
         modIcon.alt = 'Mod Icon';
         modIcon.loading = 'lazy';
 
@@ -274,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         modContainer.appendChild(modContent1);
 
-        return [modContainer, mod, (data) => enhanceModElement(modContent2, modIcon, modHeader, data)];
+        return modContainer;
     }
 
 
@@ -299,26 +202,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         header.appendChild(versionParagraph);
 
         return header;
-    }
-
-    async function enhanceModElement(modContent, modIcon, modHeader, data) {
-        if (data.latest?.icon) {
-            modIcon.src = data.latest.icon;
-            modIcon.classList.remove('missing-icon');
-        }
-
-        if (data.is_deprecated) {
-            const deprecatedParagraph = document.createElement('p');
-            deprecatedParagraph.innerHTML = '<strong>Deprecated:</strong> Yes';
-            modHeader.appendChild(deprecatedParagraph);
-
-            const warningIcon = document.createElement('img');
-            warningIcon.src = 'warning.png';
-            warningIcon.alt = 'Warning';
-            warningIcon.className = 'warning-icon';
-            warningIcon.loading = 'lazy';
-            modContent.appendChild(warningIcon);
-        }
     }
 
     function fetchProfileData(uuid) {
