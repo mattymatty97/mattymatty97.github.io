@@ -1,15 +1,14 @@
 document.addEventListener('DOMContentLoaded', async function () {
     const cacheVersion = 1;
-    const appName = "ts-profile-fetcher"
-    const cacheName = `${appName}-${cacheVersion}`;
     await deleteOldCaches();
 
-    const fetchInterval = 2000;
+    const fetchInterval = 100;
+    const fetchIntervalLong = 60 * 1000;
 
     const proxyUrl = "https://corsproxy.io/?url=";
     const thunderstoreUrl = "https://thunderstore.io/";
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
-    const getPackageUrl = (namespace, name, version) => `${thunderstoreUrl}api/experimental/package/${namespace}/${name}/`;
+    const getPackageUrl = (namespace, name) => `${thunderstoreUrl}api/experimental/package/${namespace}/${name}/`;
     const getRequestUrl = (endpoint) =>  `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
     const form = document.getElementById('profileForm');
@@ -117,35 +116,45 @@ document.addEventListener('DOMContentLoaded', async function () {
         const modPromises = mods.map(mod => createModElement(mod));
         const modElements = await Promise.all(modPromises);
         modElements.forEach(element => container.appendChild(element[0]));
-        var promise = Promise.resolve();
         for (const element of modElements) {
             const mod = element[1];
             const callback = element[2];
             try {
                 const [namespace, name] = mod.name.split('-');
-                const endpoint = getPackageUrl(namespace, name, `${mod.version.major}.${mod.version.minor}.${mod.version.patch}`);
+                const endpoint = getPackageUrl(namespace, name);
 
-                let response = await fetchCachedData(endpoint);
+                const cachedData = await fetchCachedData(endpoint);
 
-                if (response){
-                    const data = await response.json();
-                    await callback(data);
+                if (cachedData){
+                    callback(cachedData);
                     continue;
                 }
 
-                promise = promise.then(function () {
-                    return new Promise(function (resolve) {
-                        setTimeout(resolve, fetchInterval);
-                    });
-                });
+                await sleep(fetchInterval);
 
-                response = await fetchLiveData(endpoint);
+                let [valid, response] = await fetchLiveData(endpoint);
 
-                if (response){
-                    const responseClone = response.clone();
-                    await updateCachedData(endpoint, responseClone);
+                if (!valid && response != null && response.status === 403) {
+
+                    const header = response.headers.get('retry-after');
+                    let delay = fetchIntervalLong;
+                    if (header) {
+                        delay = header * 1000;
+                    }
+
+                    console.warn(`Rate-limit hit, throttling for: ${delay}ms!`)
+
+                    await sleep(delay);
+
+                    [valid, response] = await fetchLiveData(endpoint);
+                }
+
+                if (valid && response != null) {
                     const data = await response.json();
-                    await callback(data);
+                    updateCachedData(endpoint, Date.now(), data);
+                    callback(data);
+                }else{
+                    console.error(`Failed to fetch mod: ${mod.name}`);
                 }
 
             } catch (error) {
@@ -155,49 +164,64 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     async function fetchCachedData(endpoint) {
-        const cacheStorage = await caches.open(cacheName);
-        const cachedResponse = await cacheStorage.match(endpoint);
+        const storage = window.localStorage;
+        const cachedResponse = storage.getItem(endpoint);
 
-        if (!cachedResponse || !cachedResponse.ok) {
+        if (cachedResponse == null) {
             return false;
         }
 
-        const date = new Date(cachedResponse.headers.get('date'))
+        const cachedJson = JSON.parse(cachedResponse);
+
+        const date = new Date(cachedJson.timestamp)
         // if cached file is older than 1 hour
         if(Date.now() > date.getTime() + 1000 * 60 * 60){
             return false;
         }
 
-        return cachedResponse;
+        console.log(`Cache hit for: ${endpoint}`)
+
+        return cachedJson.data;
     }
 
-    async function updateCachedData(endpoint, response) {
-        const cacheStorage = await caches.open(cacheName);
-        await cacheStorage.put(endpoint, response);
+    function updateCachedData(endpoint, timestamp, data) {
+        const storage = window.localStorage;
+        storage[endpoint] = JSON.stringify({ timestamp: timestamp, data: data });
     }
 
     async function deleteOldCaches() {
-        const currentCache = await caches.open(cacheName);
-        const keys = await caches.keys();
+        const storage = window.localStorage;
+        const storageVersion = storage.version;
+        if (storageVersion < cacheVersion) {
+            storage.clear();
+        }else{
+            const keys = Object.keys(storage);
+            for (const key of keys) {
+                if (key === 'version')
+                    continue;
 
-        for (const key of keys) {
-            const isOurCache = key.startsWith(`${appName}-`);
-            if (currentCache === key || !isOurCache) {
-                continue;
+                const cachedResponse = JSON.parse(storage.getItem(key));
+
+                const date = new Date(cachedResponse.timestamp)
+                // if cached file is older than 1 hour
+                if(Date.now() > date.getTime() + 1000 * 60 * 60){
+                    storage.removeItem(key);
+                }
             }
-            await caches.delete(key);
         }
+        storage.version = cacheVersion;
     }
 
     async function fetchLiveData(endpoint) {
         return fetch(getRequestUrl(endpoint))
-            .then(async (res) => {
+            .then(res => {
                 if (res.ok)
-                    return res;
-                throw new Error(`Failed to fetch, code:${res.status}#${res.statusText}`);
+                    return [true, res];
+                else
+                    return [false, res];
             }).catch((error) => {
                 console.error(error);
-                return false;
+                return [false, null];
             });
     }
 
@@ -302,19 +326,21 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         return new Promise(async (resolve, reject) => {
 
-            let response = await fetchCachedData(endpoint);
-
-            if (!response) {
-                response = await fetchLiveData(endpoint);
-
-                if (!response) {
-                    reject(new Error(`Failed to fetch profile`));
-                }
-
-                await updateCachedData(endpoint, response.clone());
-            }
-
-            response.blob()
+            fetchLiveData(endpoint)
+                .then(([valid, response]) => {
+                    if (!valid) {
+                        if (response!=null && response.status === 403) {
+                            const header = response.headers.get('retry-after');
+                            if (header) {
+                                throw new Error(`Rate-limit hit, retry in ${header}s`);
+                            }else{
+                                throw new Error(`Rate-limit hit, retry in 60s`);
+                            }
+                        }
+                        throw new Error(`Failed to fetch profile`);
+                    }
+                    return response.blob();
+                })
                 .then(blob => readBlobAsText(blob))
                 .then(text => {
                     // Find the position of the first newline
@@ -380,5 +406,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             reader.onerror = reject;
             reader.readAsText(blob);
         });
+    }
+
+    async function sleep(timeout){
+        await new Promise(resolve => setTimeout(resolve, timeout));
     }
 });
