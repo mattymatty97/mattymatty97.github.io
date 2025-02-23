@@ -1,8 +1,15 @@
 document.addEventListener('DOMContentLoaded', async function () {
+    const cacheVersion = 1;
+    const appName = "ts-profile-fetcher"
+    const cacheName = `${appName}-${cacheVersion}`;
+    await deleteOldCaches();
+
+    const fetchInterval = 2000;
+
     const proxyUrl = "https://corsproxy.io/?url=";
     const thunderstoreUrl = "https://thunderstore.io/";
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
-    const getPackageUrl = (namespace, name) => `${thunderstoreUrl}api/experimental/package/${namespace}/${name}/`;
+    const getPackageUrl = (namespace, name, version) => `${thunderstoreUrl}api/experimental/package/${namespace}/${name}/`;
     const getRequestUrl = (endpoint) =>  `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
     const form = document.getElementById('profileForm');
@@ -109,7 +116,113 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Use Promise.all for parallel mod fetching
         const modPromises = mods.map(mod => createModElement(mod));
         const modElements = await Promise.all(modPromises);
-        modElements.forEach(element => container.appendChild(element));
+        modElements.forEach(element => container.appendChild(element[0]));
+        var promise = Promise.resolve();
+        for (const element of modElements) {
+            const mod = element[1];
+            const callback = element[2];
+            try {
+                const [namespace, name] = mod.name.split('-');
+                const endpoint = getPackageUrl(namespace, name, `${mod.version.major}.${mod.version.minor}.${mod.version.patch}`);
+
+                let response = await fetchCachedData(endpoint);
+
+                if (response){
+                    const data = await response.json();
+                    await callback(data);
+                    continue;
+                }
+
+                promise = promise.then(function () {
+                    return new Promise(function (resolve) {
+                        setTimeout(resolve, fetchInterval);
+                    });
+                });
+
+                response = await fetchLiveData(endpoint);
+
+                if (response){
+                    const responseClone = response.clone();
+                    await updateCachedData(endpoint, responseClone);
+                    const data = await response.json();
+                    await callback(data);
+                }
+
+            } catch (error) {
+                console.error(`Error fetching data for ${mod.name}:`, error);
+            }
+        }
+    }
+
+    async function fetchCachedData(endpoint) {
+        const cacheStorage = await caches.open(cacheName);
+        const cachedResponse = await cacheStorage.match(endpoint);
+
+        if (!cachedResponse || !cachedResponse.ok) {
+            return false;
+        }
+
+        const date = new Date(cachedResponse.headers.get('date'))
+        // if cached file is older than 1 hour
+        if(Date.now() > date.getTime() + 1000 * 60 * 60){
+            return false;
+        }
+
+        return cachedResponse;
+    }
+
+    async function updateCachedData(endpoint, response) {
+        const cacheStorage = await caches.open(cacheName);
+        await cacheStorage.put(endpoint, response);
+    }
+
+    async function deleteOldCaches() {
+        const currentCache = await caches.open(cacheName);
+        const keys = await caches.keys();
+
+        for (const key of keys) {
+            const isOurCache = key.startsWith(`${appName}-`);
+            if (currentCache === key || !isOurCache) {
+                continue;
+            }
+            await caches.delete(key);
+        }
+    }
+
+    async function fetchLiveData(endpoint) {
+        return fetch(getRequestUrl(endpoint))
+            .then(async (res) => {
+                if (res.ok)
+                    return res;
+                throw new Error(`Failed to fetch, code:${res.status}#${res.statusText}`);
+            }).catch((error) => {
+                console.error(error);
+                return false;
+            });
+    }
+
+    function createProfileContainer(uuid, yamlData) {
+        const container = document.createElement('div');
+        container.className = 'profile-container';
+
+        const content = document.createElement('div');
+        content.className = 'profile-content';
+
+        content.innerHTML = `
+            <p><strong>Uuid:</strong> ${uuid}</p>
+            <p><strong>From:</strong> ${yamlData.source}</p>
+            <h2>${yamlData.profileName}</h2>
+        `;
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.id = 'download-btn';
+        downloadBtn.className = 'download-btn';
+        downloadBtn.textContent = 'Download As Archive';
+
+        container.appendChild(content);
+        container.appendChild(downloadBtn);
+
+        return container;
     }
 
     async function createModElement(mod) {
@@ -137,50 +250,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         modContainer.appendChild(modContent1);
 
-        try {
-            const [namespace, name] = mod.name.split('-');
-            const endpoint = getPackageUrl(namespace, name);
-
-            fetch(getRequestUrl(endpoint))
-                .then(async (res) => {
-                    if (res.ok)
-                        return await res.json()
-                    throw new Error(`Failed to fetch mod data: ${res.statusText}`);
-                })
-                .then(async (data) => {
-                    await enhanceModElement(modContent2, modIcon, modHeader, data);
-                })
-                .catch(console.error);
-        } catch (error) {
-            console.error(`Error fetching data for ${mod.name}:`, error);
-        }
-
-        return modContainer;
+        return [modContainer, mod, (data) => enhanceModElement(modContent2, modIcon, modHeader, data)];
     }
 
-    function createProfileContainer(uuid, yamlData) {
-        const container = document.createElement('div');
-        container.className = 'profile-container';
-
-        const content = document.createElement('div');
-        content.className = 'profile-content';
-
-        content.innerHTML = `
-            <p><strong>Uuid:</strong> ${uuid}</p>
-            <p><strong>From:</strong> ${yamlData.source}</p>
-            <h2>${yamlData.profileName}</h2>
-        `;
-
-        const downloadBtn = document.createElement('button');
-        downloadBtn.id = 'download-btn';
-        downloadBtn.className = 'download-btn';
-        downloadBtn.textContent = 'Download As Archive';
-
-        container.appendChild(content);
-        container.appendChild(downloadBtn);
-
-        return container;
-    }
 
     function createModHeader(mod) {
         const header = document.createElement('div');
@@ -228,14 +300,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     function fetchProfileData(uuid) {
         const endpoint = getProfileUrl(uuid);
 
-        return new Promise((resolve, reject) => {
-            fetch(getRequestUrl(endpoint))
-                .then(response => {
-                    if (response.ok) {
-                        return response.blob();
-                    }
-                    throw new Error(response.statusText);
-                })
+        return new Promise(async (resolve, reject) => {
+
+            let response = await fetchCachedData(endpoint);
+
+            if (!response) {
+                response = await fetchLiveData(endpoint);
+
+                if (!response) {
+                    reject(new Error(`Failed to fetch profile`));
+                }
+
+                await updateCachedData(endpoint, response.clone());
+            }
+
+            response.blob()
                 .then(blob => readBlobAsText(blob))
                 .then(text => {
                     // Find the position of the first newline
