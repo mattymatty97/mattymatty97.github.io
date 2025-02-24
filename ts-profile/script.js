@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         modIcon.src = getIconUrl(namespace, name, version);
         modIcon.alt = 'Mod Icon';
         modIcon.loading = 'lazy';
+        modIcon.onError = (_) => {modIcon.src = "image.svg";};
 
         modContent1.appendChild(modIcon);
         modContent1.appendChild(modContent2);
