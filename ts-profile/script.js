@@ -24,15 +24,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.head.appendChild(meta);
     }
 
-    // Handle mobile keyboard appearing/disappearing
-    window.addEventListener('resize', () => {
-        // Wait for keyboard animation
-        setTimeout(() => {
-            window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
-        }, 100);
-    });
-
     form.addEventListener('submit', async function (event) {
         event.preventDefault();
 
