@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    const proxyUrl = "https://corsproxy.io/?url=";
+    const proxyUrl = "https://proxy.corsfix.com/?";
     const thunderstoreUrl = "https://thunderstore.io/";
 
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
