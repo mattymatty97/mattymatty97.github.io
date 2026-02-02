@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    const proxyUrl = "https://proxy.corsfix.com/?";
+    const proxyUrl = "https://proxy.corsfix.com/?url=";
     const thunderstoreUrl = "https://thunderstore.io/";
 
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
@@ -106,7 +106,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     async function fetchLiveData(endpoint) {
-        return fetch(getRequestUrl(endpoint))
+        return fetch(getRequestUrl(endpoint),
+            {
+              headers: queryParams.apiKey ? {
+                "x-corsfix-key": queryParams.apiKey,
+              } : undefined 
+            })
             .then(res => {
                 if (res.ok)
                     return [true, res];
