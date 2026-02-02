@@ -1,11 +1,11 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    const proxyUrl = "https://proxy.corsfix.com/?url=";
+    const proxyUrl = "https://crossorigin.me/";
     const thunderstoreUrl = "https://thunderstore.io/";
 
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
     const getIconUrl = (namespace, name, version) => `https://gcdn.thunderstore.io/live/repository/icons/${namespace}-${name}-${version}.png`;
 
-    const getRequestUrl = (endpoint) =>  `${proxyUrl}${encodeURIComponent(endpoint)}`;
+    const getRequestUrl = (endpoint) =>  `${proxyUrl}${endpoint}`;
 
     const form = document.getElementById('profileForm');
     const uuidInput = document.getElementById('uuidInput');
@@ -108,9 +108,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     async function fetchLiveData(endpoint) {
         return fetch(getRequestUrl(endpoint),
             {
-              headers: queryParams.apiKey ? {
-                "x-corsfix-key": queryParams.apiKey,
-              } : undefined 
+              headers: undefined 
             })
             .then(res => {
                 if (res.ok)
