@@ -1,11 +1,11 @@
 document.addEventListener('DOMContentLoaded', async function () {
-    const proxyUrl = "https://crossorigin.me/";
+    const proxyUrl = "https://api.cors.lol/?url=";
     const thunderstoreUrl = "https://thunderstore.io/";
 
     const getProfileUrl = (id) => `${thunderstoreUrl}api/experimental/legacyprofile/get/${id}/`;
     const getIconUrl = (namespace, name, version) => `https://gcdn.thunderstore.io/live/repository/icons/${namespace}-${name}-${version}.png`;
 
-    const getRequestUrl = (endpoint) =>  `${proxyUrl}${endpoint}`;
+    const getRequestUrl = (endpoint) =>  `${proxyUrl}${encodeURIComponent(endpoint)}`;
 
     const form = document.getElementById('profileForm');
     const uuidInput = document.getElementById('uuidInput');
